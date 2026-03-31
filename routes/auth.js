@@ -3,7 +3,7 @@ const jwt     = require('jsonwebtoken');
 const User    = require('../models/User');
 const auth    = require('../middleware/auth');
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'changeme_secret';
+const JWT_SECRET  = process.env.JWT_SECRET  || 'chatwave_v3_secure_default_key_2024';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d';
 
 // POST /api/auth/register

@@ -15,7 +15,7 @@ const Conversation = require('./models/Conversation');
 const app    = express();
 const server = http.createServer(app);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'chatwave_secret_key_2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'chatwave_v3_secure_default_key_2024';
 
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },

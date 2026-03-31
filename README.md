@@ -75,11 +75,11 @@ chat-app/
 ### 1 — Clone & install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chatwave.git
+git clone https://github.com/pranith080892/chatwave.git
 cd chatwave
 npm install
 ```
-
+y
 ### 2 — Configure environment
 
 ```bash
@@ -134,7 +134,7 @@ Open `http://localhost:3000` — register two accounts in different tabs and cha
 git init
 git add .
 git commit -m "Initial commit — ChatWave"
-git remote add origin https://github.com/YOUR_USERNAME/chatwave.git
+git remote add origin https://github.com/pranith080892/chatwave.git
 git push -u origin main
 ```
 
@@ -148,7 +148,7 @@ git push -u origin main
    | Key | Value |
    |-----|-------|
    | `MONGODB_URI` | Your Atlas URI from Step 1 |
-   | `JWT_SECRET` | A 32-char random string |
+   | `JWT_SECRET=` | A 32-char random string |
 
 5. Click **Create Web Service** — deployment takes ~2 minutes
 6. Your app is live at `https://chatwave-app.onrender.com` 🎉
