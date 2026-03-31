@@ -38,10 +38,25 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ── Database ──────────────────────────────────────────────────────
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/chatapp';
+// ── Database ──────────────────────────────────────────────────────
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error('❌  CRITICAL ERROR: MONGODB_URI or MONGO_URI is missing from Environment Variables!');
+  console.log('Please check your Render Environment tab and ensure the key is correctly named.');
+  process.exit(1);
+}
+
+// Log connection attempt (hiding password for safety)
+const sanitizedUri = MONGO_URI.replace(/:([^@]+)@/, ':****@');
+console.log(`📡 Attempting to connect to: ${sanitizedUri.split('@')[1] || 'Unknown Host'}`);
+
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅  MongoDB connected'))
-  .catch(err => { console.error('❌  MongoDB:', err.message); process.exit(1); });
+  .then(() => console.log('✅  MongoDB connected successfully'))
+  .catch(err => { 
+    console.error('❌  MongoDB Connection Error:', err.message); 
+    process.exit(1); 
+  });
 
 // ── API routes ────────────────────────────────────────────────────
 app.use('/api/auth',          require('./routes/auth'));
