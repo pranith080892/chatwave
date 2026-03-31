@@ -358,8 +358,15 @@ async function openConvo(convId, forceReload = false) {
 // ══ CHAT HEADER ════════════════════════════════════════════════
 function updateHeader(conv) {
   const isGroup = conv.isGroup;
-  const other   = !isGroup ? conv.participants.find(p => p._id !== ME._id) : null;
-  const name    = isGroup ? conv.groupName : (other?.username || 'Unknown');
+  
+  // Robustly find the other participant
+  let other = null;
+  if (!isGroup && Array.isArray(conv.participants)) {
+    const myId = String(ME?._id || '');
+    other = conv.participants.find(p => String(p._id || p) !== myId);
+  }
+  
+  const name = isGroup ? (conv.groupName || 'Unnamed Group') : (other?.username || 'Unknown User');
 
   $('chatName').textContent = name;
 

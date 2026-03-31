@@ -66,18 +66,29 @@ router.get('/:conversationId', auth, async (req, res) => {
       .lean();   // return plain JS objects, not Mongoose documents
 
     // Return in chronological order; ensure all IDs are strings
-    const result = messages.reverse().map(m => ({
-      ...m,
-      _id:          m._id.toString(),
-      conversation: m.conversation.toString(),
-      sender: {
-        ...m.sender,
-        _id: m.sender?._id?.toString() || m.sender?.toString() || ''
-      },
-      readBy:    (m.readBy || []).map(id => id.toString()),
-      createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
-      updatedAt: m.updatedAt instanceof Date ? m.updatedAt.toISOString() : m.updatedAt
-    }));
+    const result = messages.reverse().map(m => {
+      let senderInfo = { _id: '', username: 'Unknown User', avatar: '' };
+      
+      if (m.sender && typeof m.sender === 'object') {
+        senderInfo = {
+          _id:      m.sender._id ? m.sender._id.toString() : '',
+          username: m.sender.username || 'Unknown User',
+          avatar:   m.sender.avatar || ''
+        };
+      } else if (m.sender) {
+        senderInfo._id = m.sender.toString();
+      }
+
+      return {
+        ...m,
+        _id:          m._id.toString(),
+        conversation: m.conversation.toString(),
+        sender:       senderInfo,
+        readBy:       (m.readBy || []).map(id => id.toString()),
+        createdAt:    m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
+        updatedAt:    m.updatedAt instanceof Date ? m.updatedAt.toISOString() : m.updatedAt
+      };
+    });
 
     res.json(result);
   } catch (err) {
