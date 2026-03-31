@@ -314,6 +314,8 @@ async function openConvo(convId, forceReload = false) {
   // ── Load messages via REST ────────────────────────────────
   const mc = $('msgContainer');
   mc.innerHTML = `<div class="empty-messages"><i class="fa fa-spinner fa-spin fa-2x"></i></div>`;
+  
+  console.log('Loading messages for:', convId);
 
   try {
     const r = await apiFetch(`/api/messages/${convId}?limit=60`);
@@ -406,14 +408,19 @@ function renderMsgs(msgs) {
   mc.innerHTML = '';
   let lastDate = '';
   msgs.forEach(msg => {
-    const ds = fmtDate(msg.createdAt);
-    if (ds !== lastDate) {
-      lastDate = ds;
-      const div = document.createElement('div');
-      div.className = 'date-divider'; div.textContent = ds;
-      mc.appendChild(div);
+    try {
+      const ds = fmtDate(msg.createdAt);
+      if (ds !== lastDate) {
+        lastDate = ds;
+        const div = document.createElement('div');
+        div.className = 'date-divider'; div.textContent = ds;
+        mc.appendChild(div);
+      }
+      const el = buildMsg(msg);
+      if (el) mc.appendChild(el);
+    } catch (e) {
+      console.error('Error rendering message:', e, msg);
     }
-    mc.appendChild(buildMsg(msg));
   });
 }
 
@@ -430,9 +437,10 @@ function appendMsg(msg) {
 }
 
 function buildMsg(msg) {
-  // BUG FIX: always compare as strings to avoid ObjectId vs string mismatch
+  // Always use string IDs for reliable identification
   const senderId = String(msg.sender?._id || msg.sender || '');
-  const isMine   = senderId === String(ME._id);
+  const myId     = String(ME?._id || '');
+  const isMine   = senderId === myId;
 
   const wrap = document.createElement('div');
   wrap.className      = `msg-wrapper ${isMine ? 'out' : 'in'}`;
