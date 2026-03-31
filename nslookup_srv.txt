@@ -1,0 +1,18 @@
+Server:  dns.google
+Address:  8.8.8.8
+
+_mongodb._tcp.chatverse.so0lysv.mongodb.net	SRV service location:
+	  priority       = 0
+	  weight         = 0
+	  port           = 27017
+	  svr hostname   = ac-i59faml-shard-00-02.so0lysv.mongodb.net
+_mongodb._tcp.chatverse.so0lysv.mongodb.net	SRV service location:
+	  priority       = 0
+	  weight         = 0
+	  port           = 27017
+	  svr hostname   = ac-i59faml-shard-00-00.so0lysv.mongodb.net
+_mongodb._tcp.chatverse.so0lysv.mongodb.net	SRV service location:
+	  priority       = 0
+	  weight         = 0
+	  port           = 27017
+	  svr hostname   = ac-i59faml-shard-00-01.so0lysv.mongodb.net

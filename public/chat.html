@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatWave</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>💬</text></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+
+  <style>
+  /* ── Call overlay ──────────────────────────────────────────── */
+  .call-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(8,8,18,.97);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .call-overlay.active { display: flex; }
+  .call-glow {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 40%, rgba(124,58,237,.2), transparent 65%);
+  }
+  #remoteVideo {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 1; background: #0a0a14; display: none;
+  }
+  #localVideo {
+    position: absolute; bottom: 110px; right: 16px;
+    width: 128px; height: 92px; object-fit: cover;
+    border-radius: 12px; z-index: 3; display: none;
+    border: 2px solid rgba(255,255,255,.25); background: #111;
+  }
+  .call-center {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 14px; text-align: center;
+    padding-bottom: 100px;
+  }
+  .call-ripple {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .call-ripple::before, .call-ripple::after {
+    content: ''; position: absolute; border-radius: 50%;
+    border: 2px solid rgba(124,58,237,.3);
+    animation: callRipple 2.5s ease-out infinite;
+  }
+  .call-ripple::after { animation-delay: 1.25s; }
+  @keyframes callRipple {
+    0%   { width: 90px;  height: 90px;  opacity: 1; }
+    100% { width: 180px; height: 180px; opacity: 0; }
+  }
+  .call-ripple img {
+    width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
+    border: 3px solid var(--primary); position: relative; z-index: 1;
+  }
+  .call-peer-name   { font-size: 1.55rem; font-weight: 800; color: #fff; }
+  .call-type-badge  {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(124,58,237,.25); border: 1px solid rgba(124,58,237,.4);
+    border-radius: 20px; padding: 4px 14px; font-size: .8rem; color: #c4b5fd;
+  }
+  .call-peer-status { font-size: .88rem; color: rgba(255,255,255,.55); }
+  .call-controls {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+    z-index: 4; display: flex; align-items: center; gap: 14px;
+  }
+  .call-btn {
+    width: 54px; height: 54px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,.13); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.05rem; transition: transform .15s, opacity .15s;
+  }
+  .call-btn:hover   { transform: scale(1.1); opacity: .9; }
+  .call-btn:active  { transform: scale(.9); }
+  .call-btn.end-call { background: var(--danger); width: 64px; height: 64px; font-size: 1.2rem; }
+  .call-btn.toggled  { background: rgba(239,68,68,.45); }
+  .call-timer { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,.8); min-width: 56px; text-align: center; }
+
+  /* Incoming call */
+  .incoming-call {
+    position: fixed; bottom: 18px; right: 18px; z-index: 10001;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 1rem 1.2rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,.65);
+    display: none; flex-direction: column; gap: 12px;
+    min-width: 260px; animation: slideUpIn .3s ease;
+  }
+  .incoming-call.show { display: flex; }
+  @keyframes slideUpIn { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .ic-row   { display: flex; align-items: center; gap: 11px; }
+  .ic-img   { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); flex-shrink: 0; }
+  .ic-name  { font-size: .95rem; font-weight: 700; }
+  .ic-type  { font-size: .76rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+  .ic-type i { color: var(--primary-light); }
+  .ic-btns  { display: flex; gap: 8px; }
+  .ic-btn {
+    flex: 1; padding: .55rem; border-radius: 12px; border: none;
+    font-size: .85rem; font-weight: 600; cursor: pointer; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .ic-btn.accept  { background: var(--success); animation: acceptPulse 1.4s infinite; }
+  .ic-btn.decline { background: var(--danger); }
+  @keyframes acceptPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.5); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); } }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="logo-mini">💬</div>
+        <span>ChatWave</span>
+      </div>
+      <img id="myAvatar" class="user-avatar-sm" src="/img/default-avatar.svg" alt="Me"
+           onclick="window.location='/profile'" title="Profile"/>
+      <button class="icon-btn" onclick="logout()" title="Sign out">
+        <i class="fa fa-sign-out-alt"></i>
+      </button>
+    </div>
+
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <i class="fa fa-search"></i>
+        <input type="text" id="userSearchInput" class="search-input"
+               placeholder="Search users…" autocomplete="off"/>
+        <button class="icon-btn" id="clearSearchBtn"
+                style="display:none;width:18px;height:18px" onclick="clearSearch()">
+          <i class="fa fa-times" style="font-size:9px"></i>
+        </button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="action-chip" onclick="openGroupModal()">
+        <i class="fa fa-users-line"></i> New Group
+      </button>
+      <button class="action-chip" onclick="loadConversations()">
+        <i class="fa fa-rotate"></i> Refresh
+      </button>
+    </div>
+
+    <div class="conversations-list" id="convList">
+      <div class="empty-conversations" id="emptyConvs" style="display:none">
+        <i class="fa fa-comments"></i>
+        <p>No conversations yet.<br/>Search a user to start chatting!</p>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="dot" id="statusDot" style="background:var(--offline)"></div>
+      <span id="statusTxt">Connecting…</span>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CHAT ════════════════════════════════════════════ -->
+  <main class="main-chat" id="mainChat">
+
+    <!-- Welcome (shown by default) -->
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-icon">💬</div>
+      <h3>Welcome to ChatWave</h3>
+      <p>Select a conversation or search for a user to start messaging</p>
+    </div>
+
+    <!--
+      Chat window — BUG FIX:
+      Previously had style="display:none;flex:1;display:none" which created a
+      broken layout. Now toggled cleanly by JS: show() / hide().
+    -->
+    <div id="chatWindow" class="chat-window-inner" style="display:none">
+
+      <!-- Header -->
+      <div class="chat-header">
+        <button class="icon-btn back-btn" onclick="closeMobile()">
+          <i class="fa fa-arrow-left"></i>
+        </button>
+        <div id="chatAvatar" class="chat-header-avatar"></div>
+        <div class="chat-header-info">
+          <div id="chatName"   class="chat-header-name">–</div>
+          <div id="chatStatus" class="chat-header-status"></div>
+          <div id="typingInd"  class="typing-indicator">
+            <i class="fa fa-ellipsis fa-beat"></i> typing…
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button id="btnVoice" class="icon-btn" onclick="startCall('audio')"
+                  title="Voice call" style="display:none">
+            <i class="fa fa-phone" style="color:var(--success)"></i>
+          </button>
+          <button id="btnVideo" class="icon-btn" onclick="startCall('video')"
+                  title="Video call" style="display:none">
+            <i class="fa fa-video" style="color:var(--primary-light)"></i>
+          </button>
+          <button class="icon-btn" onclick="deleteConversation()" title="Delete">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages area — flex:1 + min-height:0 is essential -->
+      <div class="messages-area">
+        <div id="msgContainer" class="messages-container"></div>
+        <button id="scrollBtn" class="scroll-to-bottom" onclick="scrollBottom()">
+          <i class="fa fa-chevron-down"></i>
+        </button>
+      </div>
+
+      <!-- Input -->
+      <div class="chat-input-area">
+        <!-- Image preview bar -->
+        <div id="imgPreviewBar" class="img-preview-bar">
+          <img id="imgPreviewThumb" src="" alt=""/>
+          <div>
+            <div class="fname" id="imgFileName"></div>
+            <div class="fsize" id="imgFileSize"></div>
+          </div>
+          <button class="rm-btn" onclick="removeImg()">
+            <i class="fa fa-times"></i> Remove
+          </button>
+        </div>
+
+        <!-- Emoji picker -->
+        <div id="emojiPicker" class="emoji-picker">
+          <div id="emojiCats" class="emoji-cats"></div>
+          <div id="emojiGrid" class="emoji-grid"></div>
+        </div>
+
+        <div class="input-row">
+          <div class="input-attachments">
+            <button id="emojiBtn" class="icon-btn" onclick="toggleEmoji(event)" title="Emoji">
+              <i class="fa fa-face-smile" style="font-size:17px"></i>
+            </button>
+            <label class="icon-btn" title="Attach image" style="cursor:pointer;margin:0">
+              <i class="fa fa-image" style="font-size:15px"></i>
+              <input type="file" id="fileInput" accept="image/*" style="display:none"
+                     onchange="handleFileSelect(this)"/>
+            </label>
+          </div>
+          <textarea id="msgInput" class="msg-textarea" rows="1"
+                    placeholder="Type a message…"
+                    onkeydown="onKey(event)"
+                    oninput="onInput()"></textarea>
+          <button class="send-btn" onclick="sendMessage()" title="Send">
+            <i class="fa fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div><!-- /chatWindow -->
+  </main>
+</div>
+
+<!-- ══ CALL OVERLAY ══════════════════════════════════════════════ -->
+<div id="callOverlay" class="call-overlay">
+  <div class="call-glow"></div>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo"  autoplay playsinline muted></video>
+
+  <div class="call-center">
+    <div class="call-ripple">
+      <img id="callPeerImg" src="/img/default-avatar.svg" alt=""/>
+    </div>
+    <div class="call-peer-name"   id="callPeerName">–</div>
+    <div class="call-type-badge"  id="callTypeBadge">
+      <i class="fa fa-phone" id="callTypeIcon"></i>
+      <span id="callTypeTxt">Voice call</span>
+    </div>
+    <div class="call-peer-status" id="callPeerStatus">Calling…</div>
+  </div>
+
+  <div class="call-controls">
+    <button id="muteBtn"    class="call-btn" onclick="toggleMute()"    title="Mute">
+      <i id="muteIcon" class="fa fa-microphone"></i>
+    </button>
+    <button id="camBtn"     class="call-btn" onclick="toggleCam()"     title="Camera" style="display:none">
+      <i id="camIcon"  class="fa fa-video"></i>
+    </button>
+    <span class="call-timer" id="callTimer"></span>
+    <button id="speakerBtn" class="call-btn" onclick="toggleSpeaker()" title="Speaker">
+      <i id="speakerIcon" class="fa fa-volume-high"></i>
+    </button>
+    <button class="call-btn end-call" onclick="endCall()" title="End call">
+      <i class="fa fa-phone-slash"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ══ INCOMING CALL ═════════════════════════════════════════════ -->
+<div id="incomingCall" class="incoming-call">
+  <div class="ic-row">
+    <img id="icImg"  class="ic-img" src="/img/default-avatar.svg" alt=""/>
+    <div>
+      <div id="icName" class="ic-name">Caller</div>
+      <div class="ic-type">
+        <i id="icTypeIcon" class="fa fa-phone"></i>
+        <span id="icTypeTxt">Voice call</span>
+      </div>
+    </div>
+  </div>
+  <div class="ic-btns">
+    <button class="ic-btn decline" onclick="rejectCall()">
+      <i class="fa fa-phone-slash"></i> Decline
+    </button>
+    <button class="ic-btn accept" onclick="acceptCall()">
+      <i class="fa fa-phone"></i> Answer
+    </button>
+  </div>
+</div>
+
+<!-- ══ NEW GROUP MODAL ══════════════════════════════════════════ -->
+<div class="modal fade modal-dark" id="groupModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa fa-users me-2"></i>Create Group</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:.9rem">
+          <label class="form-group label" style="font-size:.75rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">
+            Group Name
+          </label>
+          <input id="groupName" type="text" class="search-users-input"
+                 placeholder="e.g. Design Team" style="margin-bottom:0"/>
+        </div>
+        <label class="form-group label" style="font-size:.75rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">
+          Add Members
+        </label>
+        <input id="groupSearch" type="text" class="search-users-input"
+               placeholder="Search users…" oninput="searchGroupUsers(this.value)"/>
+        <div id="groupChips" class="selected-chips"></div>
+        <div id="groupUserList" class="user-select-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn-modal-primary" onclick="createGroup()">
+          <i class="fa fa-check me-1"></i> Create
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LIGHTBOX ══════════════════════════════════════════════════ -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i class="fa fa-times"></i></button>
+  <img id="lightboxImg" src="" alt=""/>
+</div>
+
+<!-- Context menu -->
+<div id="ctxMenu" class="ctx-menu">
+  <div class="ctx-menu-item" onclick="ctxCopy()"><i class="fa fa-copy"></i> Copy</div>
+  <div id="ctxDel" class="ctx-menu-item danger" onclick="ctxDeleteMsg()"><i class="fa fa-trash"></i> Delete</div>
+</div>
+
+<!-- Connection pill -->
+<div id="connPill" class="connection-pill">
+  <i class="fa fa-circle" style="font-size:6px"></i>
+  <span id="connTxt">Connecting…</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/chat.js"></script>
+</body>
+</html>

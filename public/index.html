@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatWave – Sign In</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>💬</text></svg>"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .auth-page { position: relative; }
+    .auth-page::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 20% 80%, rgba(124,58,237,0.15) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(236,72,153,0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .divider { display: flex; align-items: center; gap: 10px; margin: 1.2rem 0; color: var(--text-muted); font-size: 0.78rem; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .features-row { display: flex; gap: 12px; margin-top: 2rem; }
+    .feature-chip { flex: 1; background: var(--bg-input); border-radius: var(--radius-md); padding: 0.7rem 0.5rem; text-align: center; }
+    .feature-chip .fi { font-size: 1.2rem; margin-bottom: 4px; }
+    .feature-chip p { font-size: 0.7rem; color: var(--text-muted); margin: 0; }
+  </style>
+</head>
+<body class="auth-page">
+  <div class="auth-card" style="position:relative;z-index:1">
+    <div class="auth-logo">
+      <div class="logo-icon">💬</div>
+      <div>
+        <h1>ChatWave</h1>
+        <span style="color:var(--text-muted);font-size:0.78rem">Real-time messaging</span>
+      </div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <div id="alertBox" class="alert-box"></div>
+
+    <!-- Login Form -->
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" class="form-control-dark" placeholder="you@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div style="position:relative">
+          <input type="password" id="loginPassword" class="form-control-dark" placeholder="••••••••" required style="padding-right:2.5rem"/>
+          <button type="button" onclick="togglePwd('loginPassword',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer"><i class="fa fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary-full" id="loginBtn">
+        <i class="fa fa-sign-in-alt me-2"></i> Sign In
+      </button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="regUsername" class="form-control-dark" placeholder="coolname123" required minlength="3"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="regEmail" class="form-control-dark" placeholder="you@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div style="position:relative">
+          <input type="password" id="regPassword" class="form-control-dark" placeholder="At least 6 characters" required minlength="6" style="padding-right:2.5rem"/>
+          <button type="button" onclick="togglePwd('regPassword',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer"><i class="fa fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary-full" id="registerBtn">
+        <i class="fa fa-user-plus me-2"></i> Create Account
+      </button>
+    </form>
+
+    <div class="features-row">
+      <div class="feature-chip"><div class="fi">⚡</div><p>Real-time</p></div>
+      <div class="feature-chip"><div class="fi">👥</div><p>Groups</p></div>
+      <div class="feature-chip"><div class="fi">📷</div><p>Media</p></div>
+      <div class="feature-chip"><div class="fi">🔔</div><p>Alerts</p></div>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (localStorage.getItem('token')) window.location.href = '/chat';
+
+    let activeTab = 'login';
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('.auth-tab').forEach((t, i) => {
+        t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+      });
+      document.getElementById('loginForm').style.display    = tab === 'login'    ? '' : 'none';
+      document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+      hideAlert();
+    }
+
+    function showAlert(msg, type = 'error') {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.className = `alert-box ${type}`;
+      box.style.display = 'block';
+    }
+    function hideAlert() {
+      document.getElementById('alertBox').style.display = 'none';
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = loading;
+      btn.innerHTML = loading
+        ? '<i class="fa fa-spinner fa-spin me-2"></i> Please wait…'
+        : (btnId === 'loginBtn'
+            ? '<i class="fa fa-sign-in-alt me-2"></i> Sign In'
+            : '<i class="fa fa-user-plus me-2"></i> Create Account');
+    }
+
+    function togglePwd(id, btn) {
+      const inp = document.getElementById(id);
+      if (inp.type === 'password') { inp.type = 'text'; btn.innerHTML = '<i class="fa fa-eye-slash"></i>'; }
+      else { inp.type = 'password'; btn.innerHTML = '<i class="fa fa-eye"></i>'; }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault(); hideAlert();
+      const email    = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!email || !password) return showAlert('Please fill in all fields');
+      setLoading('loginBtn', true);
+      try {
+        const res  = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) return showAlert(data.message || 'Login failed');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/chat';
+      } catch { showAlert('Network error. Please try again.'); }
+      finally { setLoading('loginBtn', false); }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault(); hideAlert();
+      const username = document.getElementById('regUsername').value.trim();
+      const email    = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      if (!username || !email || !password) return showAlert('Please fill in all fields');
+      if (username.length < 3) return showAlert('Username must be at least 3 characters');
+      if (password.length < 6) return showAlert('Password must be at least 6 characters');
+      setLoading('registerBtn', true);
+      try {
+        const res  = await fetch('/api/auth/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) return showAlert(data.message || 'Registration failed');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/chat';
+      } catch { showAlert('Network error. Please try again.'); }
+      finally { setLoading('registerBtn', false); }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    document.getElementById('registerForm').addEventListener('submit', handleRegister);
+  </script>
+</body>
+</html>

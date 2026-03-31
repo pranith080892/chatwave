@@ -1,0 +1,6 @@
+Server:  dns.google
+Address:  8.8.8.8
+
+chatverse.so0lysv.mongodb.net	text =
+
+	"authSource=admin&replicaSet=atlas-jm07pj-shard-0"

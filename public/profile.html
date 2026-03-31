@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatWave – Profile</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>💬</text></svg>"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    body { overflow: auto; }
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; }
+    .divider-line { height: 1px; background: var(--border); margin: 1.2rem 0; }
+  </style>
+</head>
+<body class="profile-page">
+
+  <!-- Top Bar -->
+  <div class="profile-topbar">
+    <a href="/chat" class="back-link"><i class="fa fa-arrow-left"></i></a>
+    <h2>My Profile</h2>
+  </div>
+
+  <div class="profile-content">
+
+    <!-- Alert box -->
+    <div id="alertBox" class="alert-box" style="margin-bottom:1rem"></div>
+
+    <!-- Avatar & Info -->
+    <div class="profile-card">
+      <h3>Profile Picture</h3>
+      <div class="avatar-upload-wrap">
+        <img id="avatarPreview" class="avatar-preview" src="/img/default-avatar.svg" alt="Avatar"/>
+        <div>
+          <label class="avatar-upload-btn" for="avatarInput">
+            <i class="fa fa-camera me-1"></i> Change Photo
+          </label>
+          <input type="file" id="avatarInput" accept="image/*" style="display:none"/>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">Max 5MB. JPG, PNG, GIF, WebP.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top:0">Account Info</h3>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="usernameInput" class="form-control-dark" placeholder="your_username" minlength="3"/>
+      </div>
+      <div class="form-group">
+        <label>Email <span style="color:var(--text-muted);font-weight:400;text-transform:none">(cannot change)</span></label>
+        <input type="email" id="emailInput" class="form-control-dark" disabled style="opacity:0.5;cursor:not-allowed"/>
+      </div>
+      <div class="form-group">
+        <label>Bio <span style="color:var(--text-muted);font-weight:400;text-transform:none">(optional)</span></label>
+        <textarea id="bioInput" class="form-control-dark" placeholder="Tell others a bit about yourself…" rows="3" maxlength="250" style="resize:vertical;height:auto"></textarea>
+        <div style="text-align:right;font-size:0.72rem;color:var(--text-muted);margin-top:4px">
+          <span id="bioCount">0</span>/250
+        </div>
+      </div>
+    </div>
+
+    <!-- Password -->
+    <div class="profile-card">
+      <h3>Change Password</h3>
+      <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" id="currentPwd" class="form-control-dark" placeholder="••••••••"/>
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="newPwd" class="form-control-dark" placeholder="At least 6 characters"/>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" id="confirmPwd" class="form-control-dark" placeholder="Repeat new password"/>
+      </div>
+    </div>
+
+    <!-- Save button -->
+    <button class="btn-primary-full" id="saveBtn" onclick="saveProfile()" style="margin-bottom:3rem">
+      <i class="fa fa-save me-2"></i> Save Changes
+    </button>
+
+  </div>
+
+  <script>
+    // Auth guard
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/';
+
+    let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    let selectedAvatarFile = null;
+
+    function showAlert(msg, type = 'error') {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.className = `alert-box ${type}`;
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setTimeout(() => box.style.display = 'none', 5000);
+    }
+
+    function getAvatarUrl(user) {
+      if (!user || !user.avatar) return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'U')}&background=7C3AED&color=fff&size=80`;
+      if (user.avatar.startsWith('/')) return user.avatar;
+      return user.avatar;
+    }
+
+    async function loadProfile() {
+      try {
+        const res  = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!res.ok) { window.location.href = '/'; return; }
+        currentUser = data.user;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        populate();
+      } catch { showAlert('Failed to load profile. Please refresh.'); }
+    }
+
+    function populate() {
+      document.getElementById('avatarPreview').src = getAvatarUrl(currentUser);
+      document.getElementById('usernameInput').value = currentUser.username || '';
+      document.getElementById('emailInput').value    = currentUser.email    || '';
+      document.getElementById('bioInput').value      = currentUser.bio      || '';
+      updateBioCount();
+    }
+
+    function updateBioCount() {
+      const val = document.getElementById('bioInput').value;
+      document.getElementById('bioCount').textContent = val.length;
+    }
+
+    document.getElementById('bioInput').addEventListener('input', updateBioCount);
+
+    document.getElementById('avatarInput').addEventListener('change', function() {
+      const file = this.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) { showAlert('File too large (max 5MB)'); return; }
+      selectedAvatarFile = file;
+      const reader = new FileReader();
+      reader.onload = e => document.getElementById('avatarPreview').src = e.target.result;
+      reader.readAsDataURL(file);
+    });
+
+    async function saveProfile() {
+      const username       = document.getElementById('usernameInput').value.trim();
+      const bio            = document.getElementById('bioInput').value.trim();
+      const currentPwd     = document.getElementById('currentPwd').value;
+      const newPwd         = document.getElementById('newPwd').value;
+      const confirmPwd     = document.getElementById('confirmPwd').value;
+
+      if (!username) return showAlert('Username cannot be empty');
+      if (newPwd && newPwd !== confirmPwd) return showAlert('New passwords do not match');
+      if (newPwd && newPwd.length < 6) return showAlert('New password must be at least 6 characters');
+      if (newPwd && !currentPwd) return showAlert('Enter your current password to change it');
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Saving…';
+
+      try {
+        const fd = new FormData();
+        fd.append('username', username);
+        fd.append('bio', bio);
+        if (selectedAvatarFile) fd.append('avatar', selectedAvatarFile);
+        if (newPwd) { fd.append('currentPassword', currentPwd); fd.append('newPassword', newPwd); }
+
+        const res  = await fetch('/api/users/profile', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd
+        });
+        const data = await res.json();
+
+        if (!res.ok) return showAlert(data.message || 'Update failed');
+
+        localStorage.setItem('user', JSON.stringify(data.user));
+        currentUser = data.user;
+        selectedAvatarFile = null;
+        showAlert('Profile updated successfully!', 'success');
+
+        // Clear password fields
+        ['currentPwd','newPwd','confirmPwd'].forEach(id => document.getElementById(id).value = '');
+      } catch { showAlert('Network error. Please try again.'); }
+      finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-save me-2"></i> Save Changes';
+      }
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

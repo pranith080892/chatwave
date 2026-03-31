@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: chatwave-app
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false          # Set this manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true  # Render auto-generates a secure random value
+      - key: JWT_EXPIRES
+        value: 7d
+    healthCheckPath: /
+    autoDeploy: true
